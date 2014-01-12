@@ -1,0 +1,23 @@
+<select>
+	<option {{#if isLion}}selected{{/if}} value="lion">Lion</option>
+	<option {{#if isTiger}}selected{{/if}} value="tiger">Tiger</option>
+	<option {{#if isBear}}selected{{/if}} value="bear">Bear</option>
+</select>
+<br/>
+
+{{#if isLion}}
+Mane Color: <input type="text" name="maneColor" value="{{maneColor}}"/>
+<br/>
+{{/if}}
+
+{{#if isTiger}}
+Stripe Count: <input type="text" name="stripeCount" value="{{stripeCount}}"/>
+</br/>
+{{/if}}
+
+{{#if isBear}}
+Hibernation Days: <input type="text" name="hibernationDays" value="{{hibernationDays}}"/>
+</br/>
+{{/if}}
+
+<input type="button" value="Suggest"/>
