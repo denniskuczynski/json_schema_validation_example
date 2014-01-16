@@ -14,7 +14,10 @@ var Animal = Backbone.Model.extend({
 
     validate: function(attributes, options) {
         var result = tv4.validateMultiple(attributes, this.schema);
-        console.log(result);
+        if (!result.valid) {
+          $('.messages.error').text(JSON.stringify(result)).show();
+          return result;
+        }
     }
 });
 
@@ -30,11 +33,14 @@ var AnimalForm = Marionette.ItemView.extend({
   },
 
   events: {
-    'change select': 'onChangeSelect',
+    'change select': 'onChangeType',
+    'change input[name=maneColor]': 'onChangeManeColor',
+    'change input[name=stripeCount]': 'onChangeStripeCount',
+    'change input[name=hibernationDays]': 'onChangeHibernationDays',
     'click input[type=button]': 'onSubmit'
   },
 
-  onChangeSelect: function(e) {
+  onChangeType: function(e) {
     this.model.set('_t', $(e.currentTarget).val());
     this.model.unset('maneColor');
     this.model.unset('stripeCount');
@@ -42,9 +48,26 @@ var AnimalForm = Marionette.ItemView.extend({
     this.render();
   },
 
+  onChangeManeColor: function(e) {
+    this.model.set('maneColor', $(e.currentTarget).val());
+  },
+
+  onChangeStripeCount: function(e) {
+    this.model.set('stripeCount', parseInt($(e.currentTarget).val(), 10));
+  },
+
+  onChangeHibernationDays: function(e) {
+    this.model.set('maneColor', $(e.currentTarget).val());
+  },
+
   onSubmit: function(e) {
-    this.model.save();
-    this.render();
+    $('.messages').hide();
+    var xhr = this.model.save();
+    if (xhr) {
+      xhr.success(function() {
+        $('.messages.success').text("Success!").show();
+      });
+    }
   }
 });
 

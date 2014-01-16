@@ -1,5 +1,6 @@
 package json_schema_validation_example.resources;
 
+import json_schema_validation_example.annotations.ValidateWithSchema;
 import json_schema_validation_example.models.*;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -18,8 +19,10 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.ContextResolver;
 import javax.ws.rs.ext.Providers;
 
@@ -35,10 +38,11 @@ public class AnimalResource {
     public AnimalResource() {
     }
 
+    /* Example of processing the Resource body as a String */
     @POST
-    @Path("/suggest")
+    @Path("/suggest_manual")
     @Consumes(MediaType.APPLICATION_JSON)
-    public Animal suggestAnimal(String jsonBody)
+    public Animal suggestAnimal_Manual(String jsonBody)
         throws IOException, ProcessingException {
         ContextResolver<ObjectMapper> resolver =
             providers.getContextResolver(ObjectMapper.class,
@@ -50,22 +54,24 @@ public class AnimalResource {
         final JsonSchemaFactory factory = JsonSchemaFactory.byDefault();
         final JsonSchema schema = factory.getJsonSchema(fstabSchema);
         ProcessingReport report = schema.validate(pass);
-        printReport(report);
-
-        final Animal response = mapper.readValue(jsonBody, Animal.class);
-        return response;
+        
+        if (report.isSuccess()) {
+            final Animal response = mapper.readValue(jsonBody, Animal.class);
+            return response;
+        } else {
+            throw new WebApplicationException(
+                Response.status(Response.Status.BAD_REQUEST).
+                    entity("{ \"additionalInfo\": false }").build());
+        }
     }
 
-    protected static void printReport(final ProcessingReport report)
-    {
-        final boolean success = report.isSuccess();
-        System.out.println("Validation " + (success ? "succeeded" : "failed"));
-
-        if (!success) {
-            System.out.println("---- BEGIN REPORT ----");
-            for (final ProcessingMessage message : report)
-                System.out.println(message);
-            System.out.println("---- END REPORT ----");
-        }
+    /* Example of processing the Resource body with a Schema Validation Filter
+     * and Jackson object mapping */
+    @POST
+    @Path("/suggest")
+    @Consumes()
+    @ValidateWithSchema(name="animal.json")
+    public Animal suggestAnimal_WithFilter(Animal animal) {
+        return animal;
     }
 }

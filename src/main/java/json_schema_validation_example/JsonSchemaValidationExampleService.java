@@ -1,6 +1,7 @@
 package json_schema_validation_example;
 
 import json_schema_validation_example.resources.*;
+import json_schema_validation_example.filters.*;
 
 import com.yammer.dropwizard.Service;
 import com.yammer.dropwizard.config.Bootstrap;
@@ -23,6 +24,8 @@ public class JsonSchemaValidationExampleService
     @Override
     public void run(JsonSchemaValidationExampleConfiguration configuration,
                     Environment environment) {
+        environment.getJerseyResourceConfig().
+            getResourceFilterFactories().add("json_schema_validation_example.filters.SchemaValidationFilterFactory");
         environment.addProvider(new CustomJacksonJsonProvider());
         environment.addResource(new AnimalResource());
     }
