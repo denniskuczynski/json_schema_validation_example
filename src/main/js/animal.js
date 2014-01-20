@@ -15,7 +15,6 @@ var Animal = Backbone.Model.extend({
     validate: function(attributes, options) {
         var result = tv4.validateMultiple(attributes, this.schema);
         if (!result.valid) {
-          $('.messages.error').text(JSON.stringify(result)).show();
           return result;
         }
     }
@@ -28,7 +27,8 @@ var AnimalForm = Marionette.ItemView.extend({
     return {
         isLion: this.model.get('_t') === 'lion',
         isTiger: this.model.get('_t') === 'tiger',
-        isBear: this.model.get('_t') === 'bear'
+        isBear: this.model.get('_t') === 'bear',
+        shouldValidateOnClient: this.shouldValidateOnClient
     };
   },
 
@@ -37,8 +37,16 @@ var AnimalForm = Marionette.ItemView.extend({
     'change input[name=maneColor]': 'onChangeManeColor',
     'change input[name=stripeCount]': 'onChangeStripeCount',
     'change input[name=hibernationDays]': 'onChangeHibernationDays',
+    'click input[name=shouldValidateOnClient]': 'onClickShouldValidateOnClient',
     'click input[type=button]': 'onSubmit'
   },
+
+  modelEvents: {
+    'invalid': 'onInvalid',
+    'error': 'onError'
+  },
+
+  shouldValidateOnClient: true,
 
   onChangeType: function(e) {
     this.model.set('_t', $(e.currentTarget).val());
@@ -60,14 +68,28 @@ var AnimalForm = Marionette.ItemView.extend({
     this.model.set('maneColor', $(e.currentTarget).val());
   },
 
+  onClickShouldValidateOnClient: function(e) {
+    this.shouldValidateOnClient = $(e.currentTarget).is(':checked');
+  },
+
   onSubmit: function(e) {
     $('.messages').hide();
-    var xhr = this.model.save();
+    var options = this.shouldValidateOnClient ? {} : { validate: false },
+        xhr = this.model.save(undefined, options);
     if (xhr) {
       xhr.success(function() {
         $('.messages.success').text("Success!").show();
       });
     }
+  },
+
+  onInvalid: function(model, error) {
+    $('.messages.error').text('CLIENT: '+JSON.stringify(error)).show();
+  },
+
+  onError: function(model, xhr) {
+    var error = JSON.parse(xhr.responseText);
+    $('.messages.error').text('SERVER: '+JSON.stringify(error)).show();
   }
 });
 

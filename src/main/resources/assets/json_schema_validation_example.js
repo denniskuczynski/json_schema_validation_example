@@ -1375,6 +1375,12 @@ function program7(depth0,data) {
   return buffer;
   }
 
+function program9(depth0,data) {
+  
+  
+  return "checked";
+  }
+
   buffer += "<div class=\"messages error\" style=\"display:none; color:red;\"></div>\n<div class=\"messages success\" style=\"display:none; color:green;\"></div>\n\n<select>\n	<option ";
   stack1 = helpers['if'].call(depth0, (depth0 && depth0.isLion), {hash:{},inverse:self.noop,fn:self.program(1, program1, data),data:data});
   if(stack1 || stack1 === 0) { buffer += stack1; }
@@ -1393,7 +1399,10 @@ function program7(depth0,data) {
   buffer += "\n\n";
   stack1 = helpers['if'].call(depth0, (depth0 && depth0.isBear), {hash:{},inverse:self.noop,fn:self.program(7, program7, data),data:data});
   if(stack1 || stack1 === 0) { buffer += stack1; }
-  buffer += "\n\n<input type=\"button\" value=\"Suggest\"/>\n";
+  buffer += "\n\n<hr/>\n\nValidate On Client: <input type=\"checkbox\" name=\"shouldValidateOnClient\" ";
+  stack1 = helpers['if'].call(depth0, (depth0 && depth0.shouldValidateOnClient), {hash:{},inverse:self.noop,fn:self.program(9, program9, data),data:data});
+  if(stack1 || stack1 === 0) { buffer += stack1; }
+  buffer += "/>\n<br/>\n\n<input type=\"button\" value=\"Suggest\"/>\n";
   return buffer;
   });
 var Animal = Backbone.Model.extend({
@@ -1413,7 +1422,6 @@ var Animal = Backbone.Model.extend({
     validate: function(attributes, options) {
         var result = tv4.validateMultiple(attributes, this.schema);
         if (!result.valid) {
-          $('.messages.error').text(JSON.stringify(result)).show();
           return result;
         }
     }
@@ -1426,7 +1434,8 @@ var AnimalForm = Marionette.ItemView.extend({
     return {
         isLion: this.model.get('_t') === 'lion',
         isTiger: this.model.get('_t') === 'tiger',
-        isBear: this.model.get('_t') === 'bear'
+        isBear: this.model.get('_t') === 'bear',
+        shouldValidateOnClient: this.shouldValidateOnClient
     };
   },
 
@@ -1435,8 +1444,16 @@ var AnimalForm = Marionette.ItemView.extend({
     'change input[name=maneColor]': 'onChangeManeColor',
     'change input[name=stripeCount]': 'onChangeStripeCount',
     'change input[name=hibernationDays]': 'onChangeHibernationDays',
+    'click input[name=shouldValidateOnClient]': 'onClickShouldValidateOnClient',
     'click input[type=button]': 'onSubmit'
   },
+
+  modelEvents: {
+    'invalid': 'onInvalid',
+    'error': 'onError'
+  },
+
+  shouldValidateOnClient: true,
 
   onChangeType: function(e) {
     this.model.set('_t', $(e.currentTarget).val());
@@ -1458,14 +1475,28 @@ var AnimalForm = Marionette.ItemView.extend({
     this.model.set('maneColor', $(e.currentTarget).val());
   },
 
+  onClickShouldValidateOnClient: function(e) {
+    this.shouldValidateOnClient = $(e.currentTarget).is(':checked');
+  },
+
   onSubmit: function(e) {
     $('.messages').hide();
-    var xhr = this.model.save();
+    var options = this.shouldValidateOnClient ? {} : { validate: false },
+        xhr = this.model.save(undefined, options);
     if (xhr) {
       xhr.success(function() {
         $('.messages.success').text("Success!").show();
       });
     }
+  },
+
+  onInvalid: function(model, error) {
+    $('.messages.error').text('CLIENT: '+JSON.stringify(error)).show();
+  },
+
+  onError: function(model, xhr) {
+    var error = JSON.parse(xhr.responseText);
+    $('.messages.error').text('SERVER: '+JSON.stringify(error)).show();
   }
 });
 

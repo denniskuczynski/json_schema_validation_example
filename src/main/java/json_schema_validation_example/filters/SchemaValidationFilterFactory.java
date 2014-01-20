@@ -11,24 +11,35 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.github.fge.jsonschema.exceptions.ProcessingException;
 import com.github.fge.jsonschema.main.JsonSchema;
 import com.github.fge.jsonschema.main.JsonSchemaFactory;
-import com.github.fge.jsonschema.report.ProcessingMessage;
-import com.github.fge.jsonschema.report.ProcessingReport;
+import com.github.fge.jsonschema.report.*;
 import com.github.fge.jsonschema.util.JsonLoader;
 
 import java.io.*;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 public class SchemaValidationFilterFactory implements ResourceFilterFactory {
 
     @Override
     public List<ResourceFilter> create(AbstractMethod am) {
+        Map<String, SchemaValidationFilter> filtersByName = new HashMap<>();
         ValidateWithSchema ann = am.getAnnotation(ValidateWithSchema.class);
         if (ann == null) {
             return Collections.<ResourceFilter>emptyList();
         } else {
-            return Collections.<ResourceFilter>singletonList(new SchemaValidationFilter(ann.name()));
+
+            return Collections.<ResourceFilter>singletonList(
+                findOrCreateFilter(ann.name(), filtersByName));
         }
+    }
+
+    private SchemaValidationFilter findOrCreateFilter(String name, Map<String, 
+                                                      SchemaValidationFilter> filtersByName) {
+        SchemaValidationFilter filter = filtersByName.get(name);
+        if (filter == null) {
+            filter = new SchemaValidationFilter(name);
+            filtersByName.put(name, filter);
+        }
+        return filter;
     }
 
     private static class SchemaValidationFilter implements ResourceFilter, ContainerRequestFilter {
@@ -55,23 +66,20 @@ public class SchemaValidationFilterFactory implements ResourceFilterFactory {
         public ContainerRequest filter(ContainerRequest request) {
             try {
                 final String jsonBody = readBodyAndResetRequest(request);
-                final JsonNode fstabSchema = JsonLoader.fromResource("/assets/schemas/"+schemaName);
-                final JsonNode pass = JsonLoader.fromString(jsonBody);
                 final JsonSchemaFactory factory = JsonSchemaFactory.byDefault();
-                final JsonSchema schema = factory.getJsonSchema(fstabSchema);
-                ProcessingReport report = schema.validate(pass);
+                final JsonNode inputData = JsonLoader.fromString(jsonBody);
+                final JsonNode schemaData = JsonLoader.fromResource("/assets/schemas/"+schemaName);
+                final JsonSchema schema = factory.getJsonSchema(schemaData);
+                final ListProcessingReport report = (ListProcessingReport)schema.validate(inputData);
                 
                 if (report.isSuccess()) {
                     return request;
                 } else {
                     throw new WebApplicationException(
                         Response.status(Response.Status.BAD_REQUEST).
-                            entity("{ \"additionalInfo\": false }").build());
+                            entity(report.asJson().toString()).build());
                 }
-            } catch (IOException ex) {
-                throw new WebApplicationException(
-                    Response.status(Response.Status.INTERNAL_SERVER_ERROR).build());
-            } catch (ProcessingException ex) {
+            } catch (IOException|ProcessingException ex) {
                 throw new WebApplicationException(
                     Response.status(Response.Status.INTERNAL_SERVER_ERROR).build());
             }

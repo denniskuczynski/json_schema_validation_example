@@ -9,8 +9,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.github.fge.jsonschema.exceptions.ProcessingException;
 import com.github.fge.jsonschema.main.JsonSchema;
 import com.github.fge.jsonschema.main.JsonSchemaFactory;
-import com.github.fge.jsonschema.report.ProcessingMessage;
-import com.github.fge.jsonschema.report.ProcessingReport;
+import com.github.fge.jsonschema.report.*;
 import com.github.fge.jsonschema.util.JsonLoader;
 
 import javax.ws.rs.GET;
@@ -49,11 +48,11 @@ public class AnimalResource {
                                          MediaType.APPLICATION_JSON_TYPE);
         ObjectMapper mapper = resolver.getContext(Object.class);
 
-        final JsonNode fstabSchema = JsonLoader.fromResource("/assets/schemas/animal.json");
-        final JsonNode pass = JsonLoader.fromString(jsonBody);
+        final JsonNode schemaData = JsonLoader.fromResource("/assets/schemas/animal.json");
+        final JsonNode inputData = JsonLoader.fromString(jsonBody);
         final JsonSchemaFactory factory = JsonSchemaFactory.byDefault();
-        final JsonSchema schema = factory.getJsonSchema(fstabSchema);
-        ProcessingReport report = schema.validate(pass);
+        final JsonSchema schema = factory.getJsonSchema(schemaData);
+        final ListProcessingReport report = (ListProcessingReport)schema.validate(inputData);
         
         if (report.isSuccess()) {
             final Animal response = mapper.readValue(jsonBody, Animal.class);
@@ -61,7 +60,7 @@ public class AnimalResource {
         } else {
             throw new WebApplicationException(
                 Response.status(Response.Status.BAD_REQUEST).
-                    entity("{ \"additionalInfo\": false }").build());
+                    entity(report.asJson().toString()).build());
         }
     }
 
